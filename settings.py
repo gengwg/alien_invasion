@@ -16,4 +16,4 @@ class Settings:
         self.bullet_width = 3   # width 3 pixels
         self.bullet_height = 15 # height 15 pixels
         self.bullet_color = (60, 60, 60)    # dark gray
-        
+        self.bullets_allowed = 300    # numbers of bullets allowed on screen
