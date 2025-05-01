@@ -84,6 +84,9 @@ class AlienInvasion:
             # print("Ship hit!!!")
             self._ship_hit()
 
+        # check if any aliens have reached the bottom of the screen.
+        self._check_aliens_bottom()
+
     def _ship_hit(self):
         """respond to ship being hit by alien."""
         if self.stats.ships_left > 0:
@@ -103,6 +106,14 @@ class AlienInvasion:
         else:
             self.stats.game_active = False
 
+    def _check_aliens_bottom(self):
+        """check if any aliens have reached the bottom of the screen."""
+        screen_rect = self.screen.get_rect()
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= screen_rect.bottom:
+                # treat this the same as if the ship got hit.
+                self._ship_hit()
+                break
 
     def _check_events(self):
         """respond to keypresses and mouse events."""
