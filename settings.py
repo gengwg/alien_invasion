@@ -12,7 +12,7 @@ class Settings:
         self.ship_speed = 1.5
 
         # bullet settings
-        self.bullet_speed = 1.0 # bullets travel slower than ship
+        self.bullet_speed = 1.5 # bullets travel slower than ship
         self.bullet_width = 3   # width 3 pixels
         self.bullet_height = 15 # height 15 pixels
         self.bullet_color = (60, 60, 60)    # dark gray
