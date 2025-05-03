@@ -111,6 +111,8 @@ class AlienInvasion:
             sleep(0.5)
         else:
             self.stats.game_active = False
+            # show the mouse cursor once the game ends.
+            pygame.mouse.set_visible(True)
 
     def _check_aliens_bottom(self):
         """check if any aliens have reached the bottom of the screen."""
@@ -130,6 +132,28 @@ class AlienInvasion:
                 self._check_keydown_events(event)
             elif event.type == pygame.KEYUP:
                 self._check_keyup_events(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                self._check_play_button(mouse_pos)
+
+    def _check_play_button(self, mouse_pos):
+        """start a new game when the player clicks Play."""
+        button_clicked = self.play_button.rect.collidepoint(mouse_pos)
+        if button_clicked and not self.stats.game_active:
+            # reset the game statistics.
+            self.stats.reset_stats()
+            self.stats.game_active = True
+
+            # get rid of any remaining aliens and bullets.
+            self.aliens.empty()
+            self.bullets.empty()
+
+            # create a new fleet and center the ship.
+            self._create_fleet()
+            self.ship.center_ship()
+
+            # hide the mouse cursor.
+            pygame.mouse.set_visible(False)
 
     def _check_keydown_events(self, event):
         """Responds to key presses."""
@@ -210,7 +234,7 @@ class AlienInvasion:
         # draw the play button if the game is inactive.
         if not self.stats.game_active:
             self.play_button.draw_button()
-            
+
         # make the most recently drawn screen visible.
         pygame.display.flip()
 
