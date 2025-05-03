@@ -10,8 +10,11 @@ class GameStats:
         self.game_active = False
 
         # High score should never be reset.
-        self.high_score = 0
-        
+        try:
+            with open('high_score.txt', 'r') as f:
+                self.high_score = int(f.read())
+        except FileNotFoundError:
+            self.high_score = 0
 
     def reset_stats(self):
         """Initialize statistics that can change during the game."""
