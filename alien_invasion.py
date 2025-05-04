@@ -50,11 +50,13 @@ class AlienInvasion:
         """load sounds for the game"""
         self.shoot_sound = pygame.mixer.Sound('sounds/laser1.wav')
         self.explosion_sound = pygame.mixer.Sound('sounds/explosion.wav')
+        self.ship_hit_sound = pygame.mixer.Sound('sounds/DeathFlash.flac')
         self.background_music = pygame.mixer.Sound('sounds/spacetheme.ogg')
 
         # set the volume for the sounds
         self.shoot_sound.set_volume(0.5)
         self.explosion_sound.set_volume(0.5)
+        self.ship_hit_sound.set_volume(0.5)
         self.background_music.set_volume(0.5)
 
         # play the background music
@@ -119,6 +121,7 @@ class AlienInvasion:
         # look for alien-ship collisions.
         if pygame.sprite.spritecollideany(self.ship, self.aliens):
             # print("Ship hit!!!")
+            self.ship_hit_sound.play()  
             self._ship_hit()
 
         # check if any aliens have reached the bottom of the screen.
