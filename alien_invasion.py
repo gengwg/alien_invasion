@@ -164,8 +164,10 @@ class AlienInvasion:
 
     def _ship_hit(self):
         """respond to ship being hit by alien."""
-        self.background_music.stop()
-        sleep(0.5)
+        # Create big explosion at ship position
+        explosion = Explosion(self.ship.rect.center, explosion_type='ship')
+        self.explosions.add(explosion)
+        # create a sound of explosion
         self.ship_hit_sound.play()
         if self.stats.ships_left > 0:
             # decrement ships_left, and update scoreboard.
@@ -181,12 +183,11 @@ class AlienInvasion:
             self.ship.center_ship()
 
             # pause.
-            sleep(0.5)
+            sleep(1.0)
         else:
             self.stats.game_active = False
             # show the mouse cursor once the game ends.
             pygame.mouse.set_visible(True)
-        self.background_music.play(-1)
 
     def _check_aliens_bottom(self):
         """check if any aliens have reached the bottom of the screen."""
