@@ -263,6 +263,11 @@ class AlienInvasion:
             self.autofire_active = not self.autofire_active
             if self.autofire_active:
                 self._fire_bullet()
+        # start the game when the player presses Enter.
+        elif event.key == pygame.K_RETURN:
+            if not self.stats.game_active:
+                mouse_pos = self.play_button.rect.center # get the center of the button
+                self._check_play_button(mouse_pos)       # simulate a mouse click
 
     def _save_high_score(self):
         """save the high score to a file."""
