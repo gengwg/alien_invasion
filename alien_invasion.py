@@ -11,6 +11,7 @@ from ship import Ship
 from bullet import Bullet
 from alien import Alien
 from star import Star
+from explosion import Explosion
 
 class AlienInvasion:
     """overall class to manage game assets and behavior"""
@@ -52,6 +53,8 @@ class AlienInvasion:
 
         self.stars = pygame.sprite.Group()
         self._create_star_background()
+
+        self.explosions = pygame.sprite.Group()
 
     def _create_star_background(self):
         """create a star background"""
@@ -100,6 +103,7 @@ class AlienInvasion:
                 self._update_bullets()
                 self._update_aliens()
                 self._auto_fire_bullets()
+                self._update_explosions()
 
             self._update_screen()
 
@@ -128,6 +132,9 @@ class AlienInvasion:
         if collisions:
             self.explosion_sound.play()
             for aliens in collisions.values():
+                for alien in aliens:
+                    explosion = Explosion(alien.rect.center)
+                    self.explosions.add(explosion)
                 self.stats.score += self.settings.alien_points
             self.sb.prep_score()
             self.sb.check_high_score()
@@ -316,6 +323,10 @@ class AlienInvasion:
             alien.rect.y += self.settings.fleet_drop_speed
         self.settings.fleet_direction *= -1
 
+    def _update_explosions(self):
+        """Update explosion animations"""
+        self.explosions.update()
+
     def _update_screen(self):
         """update images on the screen, and flip to the new screen"""
         # redraw the screen during each passs through the loop.
@@ -333,6 +344,13 @@ class AlienInvasion:
         # draw the play button if the game is inactive.
         if not self.stats.game_active:
             self.play_button.draw_button()
+
+        # draw explosions
+        for explosion in self.explosions:
+            explosion.draw(self.screen)
+
+        # self.explosions.update()
+        # self.explosions.draw(self.screen)
 
         # make the most recently drawn screen visible.
         pygame.display.flip()
