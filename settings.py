@@ -16,7 +16,7 @@ class Settings:
         # bullet settings
         self.bullet_width = 5   # width 3 pixels
         self.bullet_height = 15 # height 15 pixels
-        self.bullet_color = (60, 60, 60)    # dark gray
+        self.bullet_color = (100, 255, 255)
         self.bullets_allowed = 30    # numbers of bullets allowed on screen
 
         # alien settings
@@ -29,7 +29,7 @@ class Settings:
         self.score_scale = 1.5
 
         self.initialize_dynamic_settings()
-    
+
     def initialize_dynamic_settings(self):
         """initialize settings that change throughout the game"""
         self.ship_speed = 3.5
