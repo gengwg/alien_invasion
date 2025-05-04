@@ -34,6 +34,8 @@ class AlienInvasion:
         # create an instance to store game statistics and create a scoreboard.
         self.stats = GameStats(self)
         self.sb = Scoreboard(self)
+        
+        self.stats.level = 10
 
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
@@ -221,6 +223,12 @@ class AlienInvasion:
 
             # reset the game statistics.
             self.stats.reset_stats()
+
+
+            # apply speed increases for previous levels
+            for _ in range(self.stats.level):
+                self.settings.increase_speed()
+
             self.stats.game_active = True
             self.sb.prep_score()
             self.sb.prep_level()
