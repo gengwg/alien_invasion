@@ -56,6 +56,8 @@ class AlienInvasion:
 
         self.explosions = pygame.sprite.Group()
 
+        self.game_paused = False
+
     def _create_star_background(self):
         """create a star background"""
         for _ in range(100):
@@ -98,7 +100,7 @@ class AlienInvasion:
 
             self._check_events()
             self._update_stars()
-            if self.stats.game_active:
+            if self.stats.game_active and not self.game_paused:
                 self.ship.update()
                 self._update_bullets()
                 self._update_aliens()
@@ -246,7 +248,10 @@ class AlienInvasion:
 
     def _check_keydown_events(self, event):
         """Responds to key presses."""
-        if event.key == pygame.K_RIGHT:
+        if event.key == pygame.K_p:
+            if self.stats.game_active:
+                self.game_paused = not self.game_paused
+        elif event.key == pygame.K_RIGHT:
             # move the ship to the right.
             self.ship.moving_right = True
         elif event.key == pygame.K_LEFT:
