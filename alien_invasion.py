@@ -10,6 +10,7 @@ from button import Button
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
+from star import Star
 
 class AlienInvasion:
     """overall class to manage game assets and behavior"""
@@ -46,6 +47,29 @@ class AlienInvasion:
         pygame.mixer.init()
         self._load_sounds()
 
+        self.stars = pygame.sprite.Group()
+        self._create_star_background()
+
+    def _create_star_background(self):
+        """create a star background"""
+        for _ in range(100):
+            star = Star(self)
+            self.stars.add(star)
+
+    def _update_stars(self):
+        """update the positions of stars"""
+        self.stars.update()
+
+        # remove stars that go off the screen
+        for star in self.stars.copy():
+            if star.rect.top > self.settings.screen_height:
+                self.stars.remove(star)
+
+        # add new stars to the group
+        while len(self.stars) < 100:
+            star = Star(self)
+            self.stars.add(star)
+
     def _load_sounds(self):
         """load sounds for the game"""
         self.shoot_sound = pygame.mixer.Sound('sounds/laser1.wav')
@@ -67,6 +91,7 @@ class AlienInvasion:
         while True:
 
             self._check_events()
+            self._update_stars()
             if self.stats.game_active:
                 self.ship.update() 
                 self._update_bullets()
@@ -280,6 +305,8 @@ class AlienInvasion:
         """update images on the screen, and flip to the new screen"""
         # redraw the screen during each passs through the loop.
         self.screen.fill(self.settings.bg_color)
+        # draw the stars first
+        self.stars.draw(self.screen)
         self.ship.blitme()
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
