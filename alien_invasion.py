@@ -364,6 +364,13 @@ class AlienInvasion:
         # self.explosions.update()
         # self.explosions.draw(self.screen)
 
+        # Draw pause text if the game is paused
+        if self.game_paused:
+            pause_font = pygame.font.SysFont(None, 48)
+            pause_text = pause_font.render("Game Paused", True, (255, 255, 255))
+            pause_rect = pause_text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height // 2))
+            self.screen.blit(pause_text, pause_rect)
+
         # make the most recently drawn screen visible.
         pygame.display.flip()
 
