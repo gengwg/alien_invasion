@@ -84,10 +84,10 @@ class AlienInvasion:
         self.background_music = pygame.mixer.Sound('sounds/spacetheme.ogg')
 
         # set the volume for the sounds
-        self.shoot_sound.set_volume(0.5)
-        self.explosion_sound.set_volume(0.5)
+        self.shoot_sound.set_volume(0.3)
+        self.explosion_sound.set_volume(0.3)
         self.ship_hit_sound.set_volume(0.5)
-        self.background_music.set_volume(0.5)
+        self.background_music.set_volume(0.3)
 
         # play the background music
         self.background_music.play(-1)
