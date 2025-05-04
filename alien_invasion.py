@@ -47,6 +47,9 @@ class AlienInvasion:
         pygame.mixer.init()
         self._load_sounds()
 
+        self.autofire_active = False
+        self.last_shot_time = 0
+
         self.stars = pygame.sprite.Group()
         self._create_star_background()
 
@@ -96,6 +99,7 @@ class AlienInvasion:
                 self.ship.update()
                 self._update_bullets()
                 self._update_aliens()
+                self._auto_fire_bullets()
 
             self._update_screen()
 
@@ -237,7 +241,9 @@ class AlienInvasion:
             self._save_high_score()
             sys.exit()
         elif event.key == pygame.K_SPACE:
-            self._fire_bullet()
+            self.autofire_active = not self.autofire_active
+            if self.autofire_active:
+                self._fire_bullet()
 
     def _save_high_score(self):
         """save the high score to a file."""
@@ -251,12 +257,21 @@ class AlienInvasion:
             self.ship.moving_right = False
         elif event.key == pygame.K_LEFT:
             self.ship.moving_left = False
+        elif event.key == pygame.K_SPACE:
+            self.autofire_active = False
+
+    def _auto_fire_bullets(self):
+        """fire bullets automatically if autofire is active."""
+        current_time = pygame.time.get_ticks()
+        if self.autofire_active and (current_time - self.last_shot_time) > self.settings.autofire_cooldown:
+            self._fire_bullet()
 
     def _fire_bullet(self):
         """create a new bullet and add it to the bullets group."""
         if len(self.bullets) < self.settings.bullets_allowed:
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
+            self.last_shot_time = pygame.time.get_ticks()
             self.shoot_sound.play()
 
     def _create_fleet(self):
