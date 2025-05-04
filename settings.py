@@ -10,12 +10,11 @@ class Settings:
         self.bg_color = (10, 10, 30)     # dark space bulue
 
         # ship settings
-        self.ship_speed = 3.5
         self.ship_limit = 3
 
         # bullet settings
         self.bullet_width = 5   # width 3 pixels
-        self.bullet_height = 15 # height 15 pixels
+        self.bullet_height = 20 # height 15 pixels
         self.bullet_color = (100, 255, 255)
         self.bullets_allowed = 30    # numbers of bullets allowed on screen
 
@@ -23,7 +22,7 @@ class Settings:
         self.fleet_drop_speed = 10
 
         # how quickly the game speeds up
-        self.speedup_scale = 1.5
+        self.speedup_scale = 1.2
 
         # how quickly the alien point values increase
         self.score_scale = 1.5
@@ -34,7 +33,7 @@ class Settings:
         """initialize settings that change throughout the game"""
         self.ship_speed = 3.5
         self.bullet_speed = 4.0
-        self.alien_speed = 2.5
+        self.alien_speed = 2.0
 
         # fleet direction of 1 represents right; -1 represents left.
         self.fleet_direction = 1

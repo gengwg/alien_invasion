@@ -93,7 +93,7 @@ class AlienInvasion:
             self._check_events()
             self._update_stars()
             if self.stats.game_active:
-                self.ship.update() 
+                self.ship.update()
                 self._update_bullets()
                 self._update_aliens()
 
@@ -155,7 +155,7 @@ class AlienInvasion:
         """respond to ship being hit by alien."""
         self.background_music.stop()
         sleep(0.5)
-        self.ship_hit_sound.play()  
+        self.ship_hit_sound.play()
         if self.stats.ships_left > 0:
             # decrement ships_left, and update scoreboard.
             self.stats.ships_left -= 1
@@ -207,7 +207,7 @@ class AlienInvasion:
         if button_clicked and not self.stats.game_active:
             # reset the game settings.
             self.settings.initialize_dynamic_settings()
-                        
+
             # reset the game statistics.
             self.stats.reset_stats()
             self.stats.game_active = True
@@ -265,13 +265,13 @@ class AlienInvasion:
         # spacing between each alien is equal to one alien width.
         alien = Alien(self)
         alien_width, alien_height = alien.rect.size
-        available_space_x = self.settings.screen_width - (2 * alien_width)
-        number_aliens_x = available_space_x // (2 * alien_width)
+        available_space_x = self.settings.screen_width - (4 * alien_width)
+        number_aliens_x = int(available_space_x // (2 * alien_width))
 
         # determine the number of aliens that fit on the screen
         ship_height = self.ship.rect.height
         available_space_y = self.settings.screen_height - (8 * alien_height) - ship_height
-        number_rows = available_space_y // (2 * alien_height)
+        number_rows = int(available_space_y // (3 * alien_height))
 
         # create full fleet of aliens
         for row_number in range(number_rows):
@@ -294,7 +294,7 @@ class AlienInvasion:
             if alien.check_edges():
                 self._change_fleet_direction()
                 break
-        
+
     def _change_fleet_direction(self):
         """drop the entiere fleet and change the fleet's direction."""
         for alien in self.aliens.sprites():
