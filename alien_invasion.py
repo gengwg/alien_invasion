@@ -43,6 +43,23 @@ class AlienInvasion:
         # Make the Play button.
         self.play_button = Button(self, "Play")
 
+        pygame.mixer.init()
+        self._load_sounds()
+
+    def _load_sounds(self):
+        """load sounds for the game"""
+        self.shoot_sound = pygame.mixer.Sound('sounds/laser1.wav')
+        self.explosion_sound = pygame.mixer.Sound('sounds/explosion.wav')
+        self.background_music = pygame.mixer.Sound('sounds/spacetheme.ogg')
+
+        # set the volume for the sounds
+        self.shoot_sound.set_volume(0.5)
+        self.explosion_sound.set_volume(0.5)
+        self.background_music.set_volume(0.5)
+
+        # play the background music
+        self.background_music.play(-1)
+
     def run_game(self):
         """start the main loop for the game"""
         while True:
@@ -78,6 +95,7 @@ class AlienInvasion:
         )
 
         if collisions:
+            self.explosion_sound.play()
             for aliens in collisions.values():
                 self.stats.score += self.settings.alien_points
             self.sb.prep_score()
@@ -208,6 +226,7 @@ class AlienInvasion:
         if len(self.bullets) < self.settings.bullets_allowed:
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
+            self.shoot_sound.play()
 
     def _create_fleet(self):
         """create a fleet of aliens."""
