@@ -11,6 +11,10 @@ import re
 MAX_NAME_LENGTH = 12
 DEFAULT_PLAYER_NAME = "Player 1"
 
+# Difficulty is a per-player preference, in the order the D key cycles them.
+DIFFICULTIES = ("easy", "normal", "hard")
+DEFAULT_DIFFICULTY = "normal"
+
 _NAME_RE = re.compile(r"^[A-Za-z0-9 _-]+$")
 
 _EMPTY_STATS = {
@@ -39,12 +43,14 @@ def normalize_name(name):
 
 def _clean_record(name, raw):
     """Build a valid record from possibly-corrupt stored data."""
-    record = dict(_EMPTY_STATS, name=name)
+    record = dict(_EMPTY_STATS, name=name, difficulty=DEFAULT_DIFFICULTY)
     if isinstance(raw, dict):
         for key in _EMPTY_STATS:
             value = raw.get(key)
             if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
                 record[key] = value
+        if raw.get("difficulty") in DIFFICULTIES:
+            record["difficulty"] = raw["difficulty"]
     return record
 
 
@@ -130,6 +136,12 @@ class ProfileStore:
         record = self._active_record()
         return record["high_score"] if record else 0
 
+    @property
+    def difficulty(self):
+        """Difficulty chosen by the active player."""
+        record = self._active_record()
+        return record["difficulty"] if record else DEFAULT_DIFFICULTY
+
     def names(self):
         """Display names of all players, sorted case-insensitively."""
         return [self._players[key]["name"] for key in sorted(self._players)]
@@ -185,6 +197,21 @@ class ProfileStore:
             remaining = sorted(self._players)
             self._active_key = remaining[0] if remaining else None
         self.save()
+
+    def set_difficulty(self, difficulty):
+        """Store a difficulty for the active player and return it."""
+        if difficulty not in DIFFICULTIES:
+            raise ProfileError(f"Unknown difficulty: {difficulty}")
+        record = self._active_record()
+        if record:
+            record["difficulty"] = difficulty
+            self.save()
+        return difficulty
+
+    def cycle_difficulty(self):
+        """Move the active player to the next difficulty and return it."""
+        index = DIFFICULTIES.index(self.difficulty)
+        return self.set_difficulty(DIFFICULTIES[(index + 1) % len(DIFFICULTIES)])
 
     def record_game(self, score, level):
         """Fold a finished game's result into the active player's stats."""

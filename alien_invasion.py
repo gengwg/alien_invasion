@@ -39,6 +39,9 @@ class AlienInvasion:
         self.name_input = None
         self.profile_message = ""
 
+        # difficulty is a per-player preference.
+        self.settings.apply_difficulty(self.profiles.difficulty)
+
         # create an instance to store game statistics and create a scoreboard.
         self.stats = GameStats(self)
         self.sb = Scoreboard(self)
@@ -55,6 +58,7 @@ class AlienInvasion:
         self.profile_panel = ProfilePanel(self)
 
         self.sounds_enabled = False
+        self.muted = False
         self.shoot_sound = None
         self.explosion_sound = None
         self.ship_hit_sound = None
@@ -135,8 +139,18 @@ class AlienInvasion:
 
     def _play_sound(self, sound):
         """play a sound effect if audio is enabled."""
-        if self.sounds_enabled and sound is not None:
+        if self.sounds_enabled and not self.muted and sound is not None:
             sound.play()
+
+    def _toggle_mute(self):
+        """silence or restore all game audio."""
+        self.muted = not self.muted
+        if not self.sounds_enabled:
+            return
+        if self.muted:
+            self.background_music.stop()
+        else:
+            self.background_music.play(-1)
 
     def run_game(self):
         """start the main loop for the game"""
@@ -285,8 +299,8 @@ class AlienInvasion:
                 self.profile_message = "Press N to add a player first."
                 return
 
-            # reset the game settings.
-            self.settings.initialize_dynamic_settings()
+            # reset the game settings at the player's chosen difficulty.
+            self.settings.apply_difficulty(self.profiles.difficulty)
 
             # reset the game statistics.
             self.stats.reset_stats()
@@ -323,11 +337,13 @@ class AlienInvasion:
             return
 
         if not self.stats.game_active and event.key in (
-                pygame.K_n, pygame.K_TAB, pygame.K_DELETE):
+                pygame.K_n, pygame.K_TAB, pygame.K_DELETE, pygame.K_d):
             self._check_profile_keydown_events(event)
             return
 
-        if event.key == pygame.K_p:
+        if event.key == pygame.K_m:
+            self._toggle_mute()
+        elif event.key == pygame.K_p:
             if self.stats.game_active:
                 self.game_paused = not self.game_paused
         elif event.key == pygame.K_RIGHT:
@@ -360,10 +376,16 @@ class AlienInvasion:
         sys.exit()
 
     def _refresh_profile_display(self):
-        """re-read the active player's high score into the scoreboard."""
+        """re-read the active player's preferences into the game state."""
+        self.settings.apply_difficulty(self.profiles.difficulty)
         self.stats.high_score = self.profiles.high_score
         self.sb.prep_high_score()
         self.sb.prep_player()
+
+        # Between games the ship icons preview what the next game grants.
+        if not self.stats.game_active:
+            self.stats.ships_left = self.settings.ship_limit
+            self.sb.prep_ships()
 
     def _check_profile_keydown_events(self, event):
         """handle player-management keys on the idle screen."""
@@ -379,6 +401,11 @@ class AlienInvasion:
             if active:
                 self.profiles.delete(active)
                 self.profile_message = f"Deleted {active}."
+                self._refresh_profile_display()
+        elif event.key == pygame.K_d:
+            if self.profiles.active:
+                self.profiles.cycle_difficulty()
+                self.profile_message = ""
                 self._refresh_profile_display()
 
     def _check_name_entry_keydown_events(self, event):

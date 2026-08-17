@@ -33,6 +33,7 @@ python alien_invasion.py
 | **← →**   | Move spaceship left/right        |
 | **SPACE** | Toggle auto-fire on/off           |
 | **P**     | Pause/Unpause game               |
+| **M**     | Mute/Unmute sound                |
 | **ENTER** | Start new game                   |
 | **Q**     | Quit game (saves your progress)  |
 
@@ -42,6 +43,7 @@ On the start screen you also manage players:
 | --------- | --------------------------------------------------- |
 | **N**     | New player (type a name, ENTER to confirm, ESC cancels) |
 | **TAB**   | Switch to the next player                           |
+| **D**     | Cycle difficulty: normal → hard → easy              |
 | **DEL**   | Delete the current player                           |
 
 ## Game Features
@@ -50,9 +52,10 @@ On the start screen you also manage players:
 - 💥 Explosion effects for alien/ship destruction
 - 🔊 Sound effects and background music
 - 🌟 Starry animated background
-- 👥 Player profiles: each player keeps their own high score, best level and games played
+- 👥 Player profiles: each player keeps their own high score, best level, games played and difficulty
+- 🎚️ Three difficulties: easy, normal (the original balance) and hard
 - 🏆 Top-pilots leaderboard on the start screen
-- ⏸️ Pause functionality
+- ⏸️ Pause functionality and a mute toggle
 
 Profiles live in `profiles.json` next to the game. An older `high_score.txt`
 is imported once into the first profile.

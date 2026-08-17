@@ -32,6 +32,12 @@ class ProfilePanel:
             top = self._draw_line(
                 "N: new player    TAB: switch player    DEL: delete player",
                 self.hint_font, HINT_COLOR, top)
+            sound = "off" if self.ai_game.muted else "on"
+            top = self._draw_line(
+                f"D: difficulty ({self.ai_game.settings.difficulty})"
+                f"    M: sound ({sound})",
+                self.hint_font, HINT_COLOR, top)
+            top = self._draw_stats(top)
         else:
             top = self._draw_line(
                 f"New player name: {self.ai_game.name_input}_",
@@ -51,6 +57,18 @@ class ProfilePanel:
             for rank, (name, high_score) in enumerate(leaderboard, start=1):
                 top = self._draw_line(f"{rank}. {name} - {high_score:,}",
                                       self.hint_font, TEXT_COLOR, top)
+
+    def _draw_stats(self, top):
+        """Draw the active player's career stats, if there is one."""
+        name = self.ai_game.profiles.active
+        if not name:
+            return top
+        stats = self.ai_game.profiles.stats_for(name)
+        return self._draw_line(
+            f"Games: {stats['games_played']}    "
+            f"Best level: {stats['best_level']}    "
+            f"Total score: {stats['total_score']:,}",
+            self.hint_font, TEXT_COLOR, top)
 
     def _draw_line(self, text, font, color, top):
         """Blit one centered line and return the top of the next line."""

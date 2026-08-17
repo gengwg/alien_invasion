@@ -314,6 +314,54 @@ def test_explosions_are_drawn(game):
     assert len(game.explosions) == 1
 
 
+class _FakeSound:
+    """Records play/stop calls instead of touching an audio device."""
+
+    def __init__(self):
+        self.plays = 0
+        self.stops = 0
+
+    def play(self, loops=0):
+        self.plays += 1
+
+    def stop(self):
+        self.stops += 1
+
+
+def test_mute_key_silences_effects_and_music(game):
+    _start_game(game)
+    game.sounds_enabled = True
+    game.shoot_sound = _FakeSound()
+    game.background_music = _FakeSound()
+
+    mute = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_m, unicode="m")
+    game._check_keydown_events(mute)
+    assert game.muted is True
+    assert game.background_music.stops == 1
+    game._play_sound(game.shoot_sound)
+    assert game.shoot_sound.plays == 0
+
+    game._check_keydown_events(mute)
+    assert game.muted is False
+    assert game.background_music.plays == 1
+    game._play_sound(game.shoot_sound)
+    assert game.shoot_sound.plays == 1
+
+
+def test_mute_works_when_audio_is_unavailable(game):
+    game.sounds_enabled = False
+    game.background_music = None
+    game._toggle_mute()  # must not touch the missing music object
+    assert game.muted is True
+
+
+def test_mute_can_be_toggled_from_the_idle_screen(game):
+    press = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_m, unicode="m")
+    game._check_keydown_events(press)
+    assert game.muted is True
+    game._update_screen()  # panel shows "sound (off)"
+
+
 def test_unloadable_sounds_disable_audio(monkeypatch):
     monkeypatch.setattr(pygame.mixer, "Sound",
                         lambda *a, **k: (_ for _ in ()).throw(

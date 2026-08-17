@@ -79,8 +79,8 @@ class Scoreboard:
     def prep_player(self):
         """Turn the active player's name into a rendered image."""
         player = self.ai_game.profiles.active or "(none)"
-        self.player_image = self.font.render(f"Player: {player}", True,
-                                            self.text_color,
+        label = f"Player: {player} - {self.settings.difficulty.title()}"
+        self.player_image = self.font.render(label, True, self.text_color,
                                             self.settings.bg_color)
 
         # Below the remaining-ships icons in the top-left corner.

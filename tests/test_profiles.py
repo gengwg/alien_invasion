@@ -127,6 +127,53 @@ def test_record_game_isolates_players(store):
     assert store.stats_for("Bob")["high_score"] == 100
 
 
+def test_difficulty_defaults_to_normal(store):
+    store.create("Ace")
+    assert store.difficulty == "normal"
+    assert store.stats_for("Ace")["difficulty"] == "normal"
+
+
+def test_difficulty_without_active_player_is_the_default(store):
+    assert store.difficulty == "normal"
+    assert store.set_difficulty("hard") == "hard"  # nothing to store, no crash
+
+
+def test_set_difficulty_rejects_unknown_value(store):
+    store.create("Ace")
+    with pytest.raises(ProfileError):
+        store.set_difficulty("impossible")
+    assert store.difficulty == "normal"
+
+
+def test_cycle_difficulty_wraps_around(store):
+    store.create("Ace")
+    assert store.cycle_difficulty() == "hard"
+    assert store.cycle_difficulty() == "easy"
+    assert store.cycle_difficulty() == "normal"
+
+
+def test_difficulty_is_per_player_and_persisted(tmp_path):
+    path = str(tmp_path / "profiles.json")
+    store = ProfileStore(path)
+    store.create("Ace")
+    store.set_difficulty("hard")
+    store.create("Bob")
+    assert store.difficulty == "normal"
+
+    reloaded = ProfileStore(path)
+    assert reloaded.stats_for("Ace")["difficulty"] == "hard"
+    assert reloaded.stats_for("Bob")["difficulty"] == "normal"
+
+
+def test_invalid_stored_difficulty_falls_back_to_normal(tmp_path):
+    path = tmp_path / "profiles.json"
+    path.write_text(json.dumps({
+        "active": "Ace",
+        "players": {"ace": {"name": "Ace", "difficulty": "nightmare"}},
+    }))
+    assert ProfileStore(str(path)).difficulty == "normal"
+
+
 def test_leaderboard_orders_by_high_score(store):
     for name, score in (("Ace", 300), ("Bob", 900), ("Cid", 600)):
         store.create(name)
