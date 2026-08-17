@@ -31,7 +31,7 @@ python alien_invasion.py
 | Key       | Action                           |
 | --------- | -------------------------------- |
 | **← →**   | Move spaceship left/right        |
-| **SPACE** | Toggle auto-fire (hold to shoot) |
+| **SPACE** | Toggle auto-fire on/off           |
 | **P**     | Pause/Unpause game               |
 | **ENTER** | Start new game                   |
 | **Q**     | Quit game (saves high score)     |
@@ -59,6 +59,3 @@ sudo apt-get install python3-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev
 ```
 
 Destroy alien waves, survive as long as possible, and top the leaderboard! 👾🛸
-
-
-[def]: 'images/screnshot.png'

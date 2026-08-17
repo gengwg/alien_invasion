@@ -6,6 +6,11 @@ from paths import resource_path
 class Ship(Sprite):
     """a class to manage the ship"""
 
+    # Class-level cache so the PNG is loaded from disk only once per
+    # process, no matter how many Ship instances are created (the lives
+    # HUD in the scoreboard builds several on every game/ship hit).
+    _cached_image = None
+
     def __init__(self, ai_game):
         """initialize the ship and set its starting position"""
         super().__init__()
@@ -13,9 +18,11 @@ class Ship(Sprite):
         self.settings = ai_game.settings
         self.screen_rect = ai_game.screen.get_rect()
 
-        # load the ship image and get its rect.
-        self.image = pygame.image.load(
-            resource_path('images', 'spaceship.png')).convert_alpha()
+        # load the ship image (cached) and get its rect.
+        if Ship._cached_image is None:
+            Ship._cached_image = pygame.image.load(
+                resource_path('images', 'spaceship.png')).convert_alpha()
+        self.image = Ship._cached_image
         self.rect = self.image.get_rect()
 
         # start each new ship at the bottom center of the screen

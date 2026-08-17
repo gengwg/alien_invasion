@@ -30,10 +30,11 @@ class Explosion(Sprite):
                 (255, 200, 100)    # Light yellow
             ]
 
-        # Required Sprite attributes
-        self.image = pygame.Surface((self.size*2, self.size*2), pygame.SRCALPHA)
-        self.rect = self.image.get_rect(center=center)
-        
+        # Particles are drawn directly to the screen in draw(), so this
+        # sprite needs no image surface; keep only a rect for positioning.
+        self.rect = pygame.Rect(0, 0, self.size * 2, self.size * 2)
+        self.rect.center = center
+
         # Create particles
         self.particles = []
         for _ in range(self.num_particles):

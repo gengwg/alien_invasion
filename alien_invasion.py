@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pygame
@@ -21,9 +22,6 @@ class AlienInvasion:
         pygame.init()
 
         self.settings = Settings()
-        # self.screen = pygame.display.set_mode(
-        #     (self.settings.screen_width, self.settings.screen_height)
-        # )
 
         self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         self.settings.screen_width = self.screen.get_rect().width
@@ -72,6 +70,17 @@ class AlienInvasion:
         # is hit; 0 means no respawn is pending.
         self.ship_respawn_time = 0
         self.ship_respawn_delay = 1000
+
+        self._prep_pause_text()
+
+    def _prep_pause_text(self):
+        """pre-render the pause overlay text once (it never changes)."""
+        pause_font = pygame.font.SysFont(None, 48)
+        self.pause_text = pause_font.render(
+            "Game Paused", True, (255, 255, 255))
+        self.pause_text_rect = self.pause_text.get_rect(
+            center=(self.settings.screen_width // 2,
+                    self.settings.screen_height // 2))
 
     def _create_star_background(self):
         """create a star background"""
@@ -142,21 +151,17 @@ class AlienInvasion:
         # update bullet positions
         self.bullets.update()
 
-        # get rid of bullets that reahc top of the screen.
+        # get rid of bullets that reach the top of the screen.
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet)
-        # print(len(self.bullets))
 
         self._check_bullet_alien_collisions()
 
     def _check_bullet_alien_collisions(self):
-        """check for any bullets that have hit aliens."""
-        # check for any bullets that have hit aliens.
-        # if so, get rid of the bullet and the alien.
+        """check for any bullets that have hit aliens; remove both if so."""
         collisions = pygame.sprite.groupcollide(
             self.bullets, self.aliens, True, True
-            # self.bullets, self.aliens, False, True
         )
 
         if collisions:
@@ -189,7 +194,6 @@ class AlienInvasion:
 
         # look for alien-ship collisions.
         if pygame.sprite.spritecollideany(self.ship, self.aliens):
-            # print("Ship hit!!!")
             self._ship_hit()
 
         # check if any aliens have reached the bottom of the screen.
@@ -318,12 +322,24 @@ class AlienInvasion:
                 self._check_play_button(mouse_pos)       # simulate a mouse click
 
     def _save_high_score(self):
-        """save the high score to a file."""
+        """save the high score to a file atomically.
+
+        Write to a temporary file first, then rename it over the real file,
+        so a crash mid-write can never leave a truncated/corrupt score file.
+        """
+        tmp_file = HIGH_SCORE_FILE + '.tmp'
         try:
-            with open(HIGH_SCORE_FILE, 'w') as f:
+            with open(tmp_file, 'w') as f:
                 f.write(str(self.stats.high_score))
+            os.replace(tmp_file, HIGH_SCORE_FILE)
         except OSError as e:
             print(f"Warning: could not save high score ({e}).")
+            # Best effort: don't leave a stray temp file behind.
+            try:
+                if os.path.exists(tmp_file):
+                    os.remove(tmp_file)
+            except OSError:
+                pass
 
     def _check_keyup_events(self, event):
         """Responds to key releases."""
@@ -385,7 +401,7 @@ class AlienInvasion:
                 break
 
     def _change_fleet_direction(self):
-        """drop the entiere fleet and change the fleet's direction."""
+        """drop the entire fleet and change the fleet's direction."""
         for alien in self.aliens.sprites():
             alien.rect.y += self.settings.fleet_drop_speed
         self.settings.fleet_direction *= -1
@@ -396,7 +412,7 @@ class AlienInvasion:
 
     def _update_screen(self):
         """update images on the screen, and flip to the new screen"""
-        # redraw the screen during each passs through the loop.
+        # redraw the screen during each pass through the loop.
         self.screen.fill(self.settings.bg_color)
         # draw the stars first
         self.stars.draw(self.screen)
@@ -416,15 +432,9 @@ class AlienInvasion:
         for explosion in self.explosions:
             explosion.draw(self.screen)
 
-        # self.explosions.update()
-        # self.explosions.draw(self.screen)
-
         # Draw pause text if the game is paused
         if self.game_paused:
-            pause_font = pygame.font.SysFont(None, 48)
-            pause_text = pause_font.render("Game Paused", True, (255, 255, 255))
-            pause_rect = pause_text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height // 2))
-            self.screen.blit(pause_text, pause_rect)
+            self.screen.blit(self.pause_text, self.pause_text_rect)
 
         # make the most recently drawn screen visible.
         pygame.display.flip()
