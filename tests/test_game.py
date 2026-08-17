@@ -132,6 +132,36 @@ def test_double_ship_hit_ignored_while_respawning(game):
     assert game.stats.ships_left == ships_after_first
 
 
+def test_ship_hit_does_not_double_fleet_or_level(game):
+    """Regression test: a ship hit must not be mistaken for a cleared fleet.
+
+    _ship_hit empties the aliens group and defers recreation to the respawn
+    timer. If _update_bullets runs during that window it sees an empty group;
+    it must NOT treat that as "fleet destroyed" (which would spawn one fleet
+    immediately and bump the level, then the respawn would stack a second
+    fleet on top -- the doubling bug).
+    """
+    _start_game(game)
+    initial_count = len(game.aliens)
+    initial_level = game.stats.level
+    game.stats.ships_left = 2
+
+    game._ship_hit()
+    assert len(game.aliens) == 0
+
+    # Next frame: bullets update runs while the respawn is still pending.
+    game._update_bullets()
+    assert len(game.aliens) == 0, "fleet spawned early during respawn window"
+    assert game.stats.level == initial_level, "level bumped by a ship hit"
+
+    # After the delay, the respawn creates exactly one fleet.
+    time.sleep(1.1)
+    game._check_ship_respawn()
+    assert len(game.aliens) == initial_count, (
+        f"fleet doubled: {len(game.aliens)} vs {initial_count}")
+    assert game.stats.level == initial_level
+
+
 # --- MEDIUM #7: transient state reset on new game ------------------------
 
 def test_new_game_resets_pause_autofire_and_effects(game):

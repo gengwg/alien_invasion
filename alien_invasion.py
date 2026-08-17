@@ -169,7 +169,10 @@ class AlienInvasion:
             self.sb.prep_score()
             self.sb.check_high_score()
 
-        if not self.aliens:
+        # Start a new fleet only when the current one was destroyed by
+        # bullets. While a ship respawn is pending the aliens group is also
+        # empty, but the respawn (not this handler) recreates the fleet.
+        if not self.aliens and not self.ship_respawn_time:
             # if the entire fleet is destroyed, start a new fleet.
             self.bullets.empty()
             self._create_fleet()
