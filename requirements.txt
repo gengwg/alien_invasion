@@ -1,0 +1,3 @@
+# pygame-ce is a drop-in replacement for pygame with wheels for modern Python.
+# On Python <= 3.12 you can also use: pygame>=2.1.2
+pygame-ce>=2.5

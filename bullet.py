@@ -10,15 +10,13 @@ class Bullet(Sprite):
         self.screen = ai_game.screen
         self.settings = ai_game.settings
 
-        # Laser colors
-        self.core_color = (255, 50, 50)    # Bright red
-        self.glow_color = (255, 150, 150)  # Light red
-        self.trail_color = (255, 50, 50, 50)  # Transparent trail
+        # Laser colors and dimensions come from the game settings.
+        self.core_color = self.settings.bullet_core_color
+        self.trail_color = self.settings.bullet_trail_color
 
-        # Create laser dimensions
-        self.width = 5   # Narrow core
-        self.height = 20  # Short beam
-        self.glow_width = 15  # Glow effect
+        self.width = self.settings.bullet_width
+        self.height = self.settings.bullet_height
+        self.glow_width = self.settings.bullet_glow_width
 
         # Create main rect
         self.rect = pygame.Rect(0, 0, self.width, self.height)
@@ -26,7 +24,7 @@ class Bullet(Sprite):
 
         # Create glow surface
         self.glow_surface = pygame.Surface((self.glow_width, self.height), pygame.SRCALPHA)
-        pygame.draw.rect(self.glow_surface, (255, 100, 100, 30),
+        pygame.draw.rect(self.glow_surface, self.settings.bullet_glow_color,
                         self.glow_surface.get_rect(),
                         border_radius=2)
 

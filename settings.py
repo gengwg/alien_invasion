@@ -13,10 +13,16 @@ class Settings:
         self.ship_limit = 3
 
         # bullet settings
-        self.bullet_width = 5   # width 3 pixels
-        self.bullet_height = 20 # height 15 pixels
-        self.bullet_color = (100, 255, 255)
+        self.bullet_width = 5    # narrow core
+        self.bullet_height = 20  # short beam
+        self.bullet_glow_width = 15  # glow effect
+        self.bullet_core_color = (255, 50, 50)    # bright red
+        self.bullet_glow_color = (255, 100, 100, 30)  # translucent glow
+        self.bullet_trail_color = (255, 50, 50)
         self.bullets_allowed = 30    # numbers of bullets allowed on screen
+
+        # star background settings
+        self.star_count = 100
 
         # alien settings
         self.fleet_drop_speed = 10

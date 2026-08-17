@@ -1,8 +1,8 @@
 import sys
-from time import sleep
 
 import pygame
 
+from paths import resource_path, HIGH_SCORE_FILE
 from settings import Settings
 from game_stats import GameStats
 from scoreboard import Scoreboard
@@ -45,8 +45,18 @@ class AlienInvasion:
         # Make the Play button.
         self.play_button = Button(self, "Play")
 
-        pygame.mixer.init()
-        self._load_sounds()
+        self.sounds_enabled = False
+        self.shoot_sound = None
+        self.explosion_sound = None
+        self.ship_hit_sound = None
+        self.background_music = None
+        try:
+            pygame.mixer.init()
+        except pygame.error:
+            # No audio device available; run the game silently.
+            print("Warning: audio unavailable, continuing without sound.")
+        else:
+            self._load_sounds()
 
         self.autofire_active = False
         self.last_shot_time = 0
@@ -58,32 +68,40 @@ class AlienInvasion:
 
         self.game_paused = False
 
+        # Non-blocking ship respawn delay (milliseconds), set when the ship
+        # is hit; 0 means no respawn is pending.
+        self.ship_respawn_time = 0
+        self.ship_respawn_delay = 1000
+
     def _create_star_background(self):
         """create a star background"""
-        for _ in range(100):
+        for _ in range(self.settings.star_count):
             star = Star(self)
             self.stars.add(star)
 
     def _update_stars(self):
-        """update the positions of stars"""
+        """update the positions of stars.
+
+        Individual stars recycle themselves to the top of the screen when
+        they drift off the bottom (see Star.update), so the group size
+        stays constant and no refill is needed here.
+        """
         self.stars.update()
 
-        # remove stars that go off the screen
-        for star in self.stars.copy():
-            if star.rect.top > self.settings.screen_height:
-                self.stars.remove(star)
-
-        # add new stars to the group
-        while len(self.stars) < 100:
-            star = Star(self)
-            self.stars.add(star)
-
     def _load_sounds(self):
-        """load sounds for the game"""
-        self.shoot_sound = pygame.mixer.Sound('sounds/laser1.wav')
-        self.explosion_sound = pygame.mixer.Sound('sounds/explosion.wav')
-        self.ship_hit_sound = pygame.mixer.Sound('sounds/big_explosion.ogg')
-        self.background_music = pygame.mixer.Sound('sounds/spacetheme.ogg')
+        """load sounds for the game; disable audio if files are missing"""
+        try:
+            self.shoot_sound = pygame.mixer.Sound(
+                resource_path('sounds', 'laser1.wav'))
+            self.explosion_sound = pygame.mixer.Sound(
+                resource_path('sounds', 'explosion.wav'))
+            self.ship_hit_sound = pygame.mixer.Sound(
+                resource_path('sounds', 'big_explosion.ogg'))
+            self.background_music = pygame.mixer.Sound(
+                resource_path('sounds', 'spacetheme.ogg'))
+        except (pygame.error, FileNotFoundError) as e:
+            print(f"Warning: could not load sounds ({e}); continuing without sound.")
+            return
 
         # set the volume for the sounds
         self.shoot_sound.set_volume(0.3)
@@ -93,19 +111,29 @@ class AlienInvasion:
 
         # play the background music
         self.background_music.play(-1)
+        self.sounds_enabled = True
+
+    def _play_sound(self, sound):
+        """play a sound effect if audio is enabled."""
+        if self.sounds_enabled and sound is not None:
+            sound.play()
 
     def run_game(self):
         """start the main loop for the game"""
         while True:
 
             self._check_events()
-            self._update_stars()
             if self.stats.game_active and not self.game_paused:
+                self._update_stars()
                 self.ship.update()
                 self._update_bullets()
                 self._update_aliens()
                 self._auto_fire_bullets()
-                self._update_explosions()
+                self._check_ship_respawn()
+
+            # Explosions are purely visual; keep animating them even when
+            # the game is paused or over so they never freeze mid-effect.
+            self._update_explosions()
 
             self._update_screen()
 
@@ -132,7 +160,7 @@ class AlienInvasion:
         )
 
         if collisions:
-            self.explosion_sound.play()
+            self._play_sound(self.explosion_sound)
             for aliens in collisions.values():
                 for alien in aliens:
                     explosion = Explosion(alien.rect.center)
@@ -166,11 +194,15 @@ class AlienInvasion:
 
     def _ship_hit(self):
         """respond to ship being hit by alien."""
+        # Ignore further collisions while a respawn is already pending.
+        if self.ship_respawn_time:
+            return
+
         # Create big explosion at ship position
         explosion = Explosion(self.ship.rect.center, explosion_type='ship')
         self.explosions.add(explosion)
         # create a sound of explosion
-        self.ship_hit_sound.play()
+        self._play_sound(self.ship_hit_sound)
         if self.stats.ships_left > 0:
             # decrement ships_left, and update scoreboard.
             self.stats.ships_left -= 1
@@ -180,16 +212,28 @@ class AlienInvasion:
             self.aliens.empty()
             self.bullets.empty()
 
+            # move the ship off-screen while it "respawns".
+            self.ship.rect.bottom = 0
+            self.ship.x = float(self.ship.rect.x)
+
+            # schedule a non-blocking respawn instead of sleeping.
+            self.ship_respawn_time = pygame.time.get_ticks()
+        else:
+            self.stats.game_active = False
+            # save the high score when the game ends.
+            self._save_high_score()
+            # show the mouse cursor once the game ends.
+            pygame.mouse.set_visible(True)
+
+    def _check_ship_respawn(self):
+        """respawn the ship and fleet once the respawn delay has elapsed."""
+        if (self.ship_respawn_time and
+                pygame.time.get_ticks() - self.ship_respawn_time
+                >= self.ship_respawn_delay):
+            self.ship_respawn_time = 0
             # create a new fleet and center the ship.
             self._create_fleet()
             self.ship.center_ship()
-
-            # pause.
-            sleep(1.0)
-        else:
-            self.stats.game_active = False
-            # show the mouse cursor once the game ends.
-            pygame.mouse.set_visible(True)
 
     def _check_aliens_bottom(self):
         """check if any aliens have reached the bottom of the screen."""
@@ -225,10 +269,11 @@ class AlienInvasion:
             # reset the game statistics.
             self.stats.reset_stats()
 
-
-            # apply speed increases for previous levels
-            for _ in range(self.stats.level):
-                self.settings.increase_speed()
+            # reset transient gameplay state from any previous game.
+            self.game_paused = False
+            self.autofire_active = False
+            self.ship_respawn_time = 0
+            self.explosions.empty()
 
             self.stats.game_active = True
             self.sb.prep_score()
@@ -271,9 +316,11 @@ class AlienInvasion:
 
     def _save_high_score(self):
         """save the high score to a file."""
-        with open('high_score.txt', 'w') as f:
-            f.write(str(self.stats.high_score))
-        # print("High score saved.")
+        try:
+            with open(HIGH_SCORE_FILE, 'w') as f:
+                f.write(str(self.stats.high_score))
+        except OSError as e:
+            print(f"Warning: could not save high score ({e}).")
 
     def _check_keyup_events(self, event):
         """Responds to key releases."""
@@ -296,7 +343,7 @@ class AlienInvasion:
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
             self.last_shot_time = pygame.time.get_ticks()
-            self.shoot_sound.play()
+            self._play_sound(self.shoot_sound)
 
     def _create_fleet(self):
         """create a fleet of aliens."""
