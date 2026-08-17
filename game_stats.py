@@ -1,6 +1,3 @@
-from paths import HIGH_SCORE_FILE
-
-
 class GameStats:
     """Track statistics for Alien Invasion."""
 
@@ -12,12 +9,8 @@ class GameStats:
         # Start Alien Invasion in an inactive state.
         self.game_active = False
 
-        # High score should never be reset.
-        try:
-            with open(HIGH_SCORE_FILE, 'r') as f:
-                self.high_score = int(f.read())
-        except (OSError, ValueError):
-            self.high_score = 0
+        # The high score belongs to the active player, not to the session.
+        self.high_score = ai_game.profiles.high_score
 
     def reset_stats(self):
         """Initialize statistics that can change during the game."""

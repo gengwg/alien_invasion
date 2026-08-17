@@ -34,7 +34,15 @@ python alien_invasion.py
 | **SPACE** | Toggle auto-fire on/off           |
 | **P**     | Pause/Unpause game               |
 | **ENTER** | Start new game                   |
-| **Q**     | Quit game (saves high score)     |
+| **Q**     | Quit game (saves your progress)  |
+
+On the start screen you also manage players:
+
+| Key       | Action                                              |
+| --------- | --------------------------------------------------- |
+| **N**     | New player (type a name, ENTER to confirm, ESC cancels) |
+| **TAB**   | Switch to the next player                           |
+| **DEL**   | Delete the current player                           |
 
 ## Game Features
 
@@ -42,8 +50,19 @@ python alien_invasion.py
 - 💥 Explosion effects for alien/ship destruction
 - 🔊 Sound effects and background music
 - 🌟 Starry animated background
-- 🏆 Persistent high score tracking
+- 👥 Player profiles: each player keeps their own high score, best level and games played
+- 🏆 Top-pilots leaderboard on the start screen
 - ⏸️ Pause functionality
+
+Profiles live in `profiles.json` next to the game. An older `high_score.txt`
+is imported once into the first profile.
+
+## Tests
+
+```bash
+python -m pytest tests/ -v          # headless, no display or audio needed
+python tests/coverage_report.py     # line coverage per module (stdlib only)
+```
 
 ## Troubleshooting
 

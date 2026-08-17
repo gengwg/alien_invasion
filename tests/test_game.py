@@ -1,40 +1,22 @@
 """Headless integration and regression tests for Alien Invasion.
 
 Run with:
-    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy .venv/bin/python -m pytest tests/ -v
+    .venv/bin/python -m pytest tests/ -v
 
 These tests drive the real game loop and event handlers without a display
-or audio device, so they run in CI / headless environments.
+or audio device, so they run in CI / headless environments. Shared setup
+(headless SDL, isolated data files, the `game` fixture) lives in conftest.py.
 """
 
-import os
 import time
 
 import pygame
 import pytest
 
-# Headless SDL must be configured before the game initializes pygame.
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-
 from alien_invasion import AlienInvasion
 from explosion import Explosion
 from bullet import Bullet
-from paths import HIGH_SCORE_FILE
-
-
-@pytest.fixture
-def game():
-    """A fresh game instance; high-score file cleaned up afterwards."""
-    ai = AlienInvasion()
-    yield ai
-    if os.path.exists(HIGH_SCORE_FILE):
-        os.remove(HIGH_SCORE_FILE)
-    pygame.quit()
-
-
-def _start_game(ai):
-    ai._check_play_button(ai.play_button.rect.center)
+from helpers import start_game as _start_game
 
 
 # --- HIGH #1: starting level and speed integrity -------------------------
@@ -63,22 +45,22 @@ def test_level_up_increases_speed_exactly_once(game):
 
 def test_high_score_saved_on_game_over(game):
     _start_game(game)
+    player = game.profiles.active
     game.stats.score = 750
     game.stats.high_score = 750
     game.stats.ships_left = 0
     game._ship_hit()
     assert game.stats.game_active is False
-    with open(HIGH_SCORE_FILE) as f:
-        assert int(f.read()) == 750
+    assert game.profiles.stats_for(player)["high_score"] == 750
 
 
 # --- HIGH #3/#4: robust resources ----------------------------------------
 
-def test_corrupt_high_score_file_falls_back_to_zero(game):
-    with open(HIGH_SCORE_FILE, "w") as f:
-        f.write("garbage")
+def test_high_score_comes_from_active_profile(game):
     from game_stats import GameStats
-    assert GameStats(game).high_score == 0
+    game.profiles.create("Ace")
+    game.profiles.record_game(score=640, level=3)
+    assert GameStats(game).high_score == 640
 
 
 def test_missing_mixer_still_allows_play(game, monkeypatch):
@@ -195,6 +177,13 @@ def test_star_count_stable_across_updates(game):
     assert len(game.stars) == game.settings.star_count
 
 
+def test_star_recycles_to_top_when_off_screen(game):
+    star = game.stars.sprites()[0]
+    star.rect.y = game.settings.screen_height + 10
+    game._update_stars()
+    assert star.rect.top <= 0
+
+
 # --- Full loop: drive run_game frames with injected events ---------------
 
 def test_main_loop_runs_frames_without_errors(game):
@@ -228,10 +217,120 @@ def test_main_loop_runs_frames_without_errors(game):
     game._update_screen()  # final render without error
 
 
+def test_bullet_alien_collision_scores_and_explodes(game):
+    _start_game(game)
+    alien = game.aliens.sprites()[0]
+    bullet = Bullet(game)
+    bullet.rect.center = alien.rect.center
+    game.bullets.add(bullet)
+
+    aliens_before = len(game.aliens)
+    game._check_bullet_alien_collisions()
+
+    assert len(game.aliens) == aliens_before - 1
+    assert game.stats.score == game.settings.alien_points
+    assert game.stats.high_score == game.stats.score
+    assert len(game.explosions) == 1
+    assert len(game.bullets) == 0
+
+
+def test_bullets_are_removed_at_top_of_screen(game):
+    _start_game(game)
+    game.aliens.empty()
+    game.bullets.empty()
+    bullet = Bullet(game)
+    bullet.y = -bullet.rect.height  # already off the top of the screen
+    game.bullets.add(bullet)
+    game._update_bullets()
+    assert len(game.bullets) == 0
+
+
+def test_alien_touching_ship_costs_a_ship(game):
+    _start_game(game)
+    ships_before = game.stats.ships_left
+    alien = game.aliens.sprites()[0]
+    # Alien.update rewrites rect.x from alien.x, so move both.
+    alien.x = float(game.ship.rect.centerx)
+    alien.rect.x = game.ship.rect.centerx
+    alien.rect.y = game.ship.rect.y
+    game._update_aliens()
+    assert game.stats.ships_left == ships_before - 1
+
+
+def test_check_events_dispatches_key_events(game):
+    _start_game(game)
+    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT,
+                                         unicode=""))
+    game._check_events()
+    assert game.ship.moving_right is True
+    pygame.event.post(pygame.event.Event(pygame.KEYUP, key=pygame.K_RIGHT))
+    game._check_events()
+    assert game.ship.moving_right is False
+
+
+def test_alien_reaching_bottom_costs_a_ship(game):
+    _start_game(game)
+    ships_before = game.stats.ships_left
+    game.aliens.sprites()[0].rect.bottom = game.screen.get_rect().bottom
+    game._check_aliens_bottom()
+    assert game.stats.ships_left == ships_before - 1
+
+
+def test_key_release_stops_movement_and_autofire(game):
+    _start_game(game)
+    for key in (pygame.K_RIGHT, pygame.K_LEFT, pygame.K_SPACE):
+        game._check_keydown_events(pygame.event.Event(pygame.KEYDOWN, key=key))
+    assert game.ship.moving_right and game.ship.moving_left
+    game.ship.update()  # exercises both movement branches
+    for key in (pygame.K_RIGHT, pygame.K_LEFT, pygame.K_SPACE):
+        game._check_keyup_events(pygame.event.Event(pygame.KEYUP, key=key))
+    assert not game.ship.moving_right and not game.ship.moving_left
+    assert game.autofire_active is False
+
+
+def test_enter_starts_game_when_idle(game):
+    game._check_keydown_events(
+        pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, unicode="\r"))
+    assert game.stats.game_active is True
+
+
+def test_quit_event_exits(game):
+    pygame.event.post(pygame.event.Event(pygame.QUIT))
+    with pytest.raises(SystemExit):
+        game._check_events()
+
+
+def test_mouse_click_is_handled(game):
+    pygame.event.post(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(0, 0)))
+    game._check_events()  # off-button click: no crash, game stays idle
+    assert game.stats.game_active is False
+
+
+def test_explosions_are_drawn(game):
+    _start_game(game)
+    game.explosions.add(Explosion((100, 100), explosion_type='ship'))
+    game._update_screen()
+    assert len(game.explosions) == 1
+
+
+def test_unloadable_sounds_disable_audio(monkeypatch):
+    monkeypatch.setattr(pygame.mixer, "Sound",
+                        lambda *a, **k: (_ for _ in ()).throw(
+                            pygame.error("bad file")))
+    ai = AlienInvasion()
+    try:
+        assert ai.sounds_enabled is False
+        ai._fire_bullet()  # firing must still work silently
+    finally:
+        pygame.quit()
+
+
 def test_pause_toggle_via_keyboard(game):
     _start_game(game)
     p = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_p)
     game._check_keydown_events(p)
     assert game.game_paused is True
+    game._update_screen()  # draws the pause overlay
     game._check_keydown_events(p)
     assert game.game_paused is False

@@ -1,9 +1,10 @@
-import os
 import sys
 
 import pygame
 
-from paths import resource_path, HIGH_SCORE_FILE
+from paths import resource_path, HIGH_SCORE_FILE, PROFILES_FILE
+from profiles import ProfileError, ProfileStore, MAX_NAME_LENGTH
+from profile_panel import ProfilePanel
 from settings import Settings
 from game_stats import GameStats
 from scoreboard import Scoreboard
@@ -29,6 +30,15 @@ class AlienInvasion:
 
         pygame.display.set_caption("Alien Invasion")
 
+        # player profiles own the high scores, so load them before the stats.
+        self.profiles = ProfileStore(PROFILES_FILE)
+        self.profiles.ensure_default(HIGH_SCORE_FILE)
+
+        # Pending name being typed on the idle screen (None when not typing),
+        # and a short feedback message shown under the Play button.
+        self.name_input = None
+        self.profile_message = ""
+
         # create an instance to store game statistics and create a scoreboard.
         self.stats = GameStats(self)
         self.sb = Scoreboard(self)
@@ -40,8 +50,9 @@ class AlienInvasion:
 
         self._create_fleet()
 
-        # Make the Play button.
+        # Make the Play button and the idle-screen profile panel.
         self.play_button = Button(self, "Play")
+        self.profile_panel = ProfilePanel(self)
 
         self.sounds_enabled = False
         self.shoot_sound = None
@@ -227,8 +238,8 @@ class AlienInvasion:
             self.ship_respawn_time = pygame.time.get_ticks()
         else:
             self.stats.game_active = False
-            # save the high score when the game ends.
-            self._save_high_score()
+            # record the finished game against the active player's profile.
+            self._record_game_result()
             # show the mouse cursor once the game ends.
             pygame.mouse.set_visible(True)
 
@@ -255,8 +266,7 @@ class AlienInvasion:
         """respond to keypresses and mouse events."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self._save_high_score()
-                sys.exit()
+                self._quit_game()
             elif event.type == pygame.KEYDOWN:
                 self._check_keydown_events(event)
             elif event.type == pygame.KEYUP:
@@ -270,6 +280,11 @@ class AlienInvasion:
         """start a new game when the player clicks Play."""
         button_clicked = self.play_button.rect.collidepoint(mouse_pos)
         if button_clicked and not self.stats.game_active:
+            # a game always belongs to a player, so require one first.
+            if not self.profiles.active:
+                self.profile_message = "Press N to add a player first."
+                return
+
             # reset the game settings.
             self.settings.initialize_dynamic_settings()
 
@@ -281,6 +296,8 @@ class AlienInvasion:
             self.autofire_active = False
             self.ship_respawn_time = 0
             self.explosions.empty()
+            self.name_input = None
+            self.profile_message = ""
 
             self.stats.game_active = True
             self.sb.prep_score()
@@ -300,6 +317,16 @@ class AlienInvasion:
 
     def _check_keydown_events(self, event):
         """Responds to key presses."""
+        # While naming a player, every key belongs to the text prompt.
+        if self.name_input is not None:
+            self._check_name_entry_keydown_events(event)
+            return
+
+        if not self.stats.game_active and event.key in (
+                pygame.K_n, pygame.K_TAB, pygame.K_DELETE):
+            self._check_profile_keydown_events(event)
+            return
+
         if event.key == pygame.K_p:
             if self.stats.game_active:
                 self.game_paused = not self.game_paused
@@ -309,8 +336,7 @@ class AlienInvasion:
         elif event.key == pygame.K_LEFT:
             self.ship.moving_left = True
         elif event.key == pygame.K_q:
-            self._save_high_score()
-            sys.exit()
+            self._quit_game()
         elif event.key == pygame.K_SPACE:
             self.autofire_active = not self.autofire_active
             if self.autofire_active:
@@ -321,25 +347,59 @@ class AlienInvasion:
                 mouse_pos = self.play_button.rect.center # get the center of the button
                 self._check_play_button(mouse_pos)       # simulate a mouse click
 
-    def _save_high_score(self):
-        """save the high score to a file atomically.
+    def _record_game_result(self):
+        """store the score and level of a finished game in the profile."""
+        self.profiles.record_game(self.stats.score, self.stats.level)
+        self._refresh_profile_display()
 
-        Write to a temporary file first, then rename it over the real file,
-        so a crash mid-write can never leave a truncated/corrupt score file.
-        """
-        tmp_file = HIGH_SCORE_FILE + '.tmp'
-        try:
-            with open(tmp_file, 'w') as f:
-                f.write(str(self.stats.high_score))
-            os.replace(tmp_file, HIGH_SCORE_FILE)
-        except OSError as e:
-            print(f"Warning: could not save high score ({e}).")
-            # Best effort: don't leave a stray temp file behind.
+    def _quit_game(self):
+        """save an in-progress game's result, then exit."""
+        if self.stats.game_active:
+            self.stats.game_active = False
+            self._record_game_result()
+        sys.exit()
+
+    def _refresh_profile_display(self):
+        """re-read the active player's high score into the scoreboard."""
+        self.stats.high_score = self.profiles.high_score
+        self.sb.prep_high_score()
+        self.sb.prep_player()
+
+    def _check_profile_keydown_events(self, event):
+        """handle player-management keys on the idle screen."""
+        if event.key == pygame.K_n:
+            self.name_input = ""
+            self.profile_message = ""
+        elif event.key == pygame.K_TAB:
+            if self.profiles.select_next():
+                self.profile_message = ""
+                self._refresh_profile_display()
+        elif event.key == pygame.K_DELETE:
+            active = self.profiles.active
+            if active:
+                self.profiles.delete(active)
+                self.profile_message = f"Deleted {active}."
+                self._refresh_profile_display()
+
+    def _check_name_entry_keydown_events(self, event):
+        """build up the new player's name while the prompt is open."""
+        if event.key == pygame.K_ESCAPE:
+            self.name_input = None
+            self.profile_message = ""
+        elif event.key == pygame.K_BACKSPACE:
+            self.name_input = self.name_input[:-1]
+        elif event.key == pygame.K_RETURN:
             try:
-                if os.path.exists(tmp_file):
-                    os.remove(tmp_file)
-            except OSError:
-                pass
+                name = self.profiles.create(self.name_input)
+            except ProfileError as e:
+                self.profile_message = str(e)
+            else:
+                self.name_input = None
+                self.profile_message = f"Welcome, {name}!"
+                self._refresh_profile_display()
+        elif event.unicode and event.unicode.isprintable():
+            if len(self.name_input) < MAX_NAME_LENGTH:
+                self.name_input += event.unicode
 
     def _check_keyup_events(self, event):
         """Responds to key releases."""
@@ -424,9 +484,10 @@ class AlienInvasion:
         # draw the score information.
         self.sb.show_score()
 
-        # draw the play button if the game is inactive.
+        # draw the play button and player management panel when idle.
         if not self.stats.game_active:
             self.play_button.draw_button()
+            self.profile_panel.draw()
 
         # draw explosions
         for explosion in self.explosions:

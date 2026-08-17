@@ -23,6 +23,7 @@ class Scoreboard:
         self.prep_high_score()
         self.prep_level()
         self.prep_ships()
+        self.prep_player()
 
     def prep_score(self):
         """Turn the score into a rendered image."""
@@ -75,9 +76,22 @@ class Scoreboard:
             ship.rect.y = 10
             self.ships.add(ship)
 
+    def prep_player(self):
+        """Turn the active player's name into a rendered image."""
+        player = self.ai_game.profiles.active or "(none)"
+        self.player_image = self.font.render(f"Player: {player}", True,
+                                            self.text_color,
+                                            self.settings.bg_color)
+
+        # Below the remaining-ships icons in the top-left corner.
+        self.player_rect = self.player_image.get_rect()
+        self.player_rect.left = 10
+        self.player_rect.top = 80
+
     def show_score(self):
         """Draw score to the screen."""
         self.screen.blit(self.score_image, self.score_rect)
         self.screen.blit(self.high_score_image, self.high_score_rect)
         self.screen.blit(self.level_image, self.level_rect)
+        self.screen.blit(self.player_image, self.player_rect)
         self.ships.draw(self.screen)
