@@ -39,6 +39,7 @@ class Settings:
         # screen settings
         self.screen_width = 1200
         self.screen_height = 800
+        self.fps = 60
         # self.bg_color = (230, 230, 230)   # light gray
         self.bg_color = (10, 10, 30)     # dark space blue
 

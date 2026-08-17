@@ -2,6 +2,7 @@ import sys
 
 import pygame
 
+from cli import apply_player_options, parse_args, run_admin_commands
 from paths import resource_path, HIGH_SCORE_FILE, PROFILES_FILE
 from profiles import ProfileError, ProfileStore, MAX_NAME_LENGTH
 from profile_panel import ProfilePanel
@@ -18,15 +19,23 @@ from explosion import Explosion
 class AlienInvasion:
     """overall class to manage game assets and behavior"""
 
-    def __init__(self):
+    def __init__(self, options=None):
         """initialize the game and create game resources"""
         pygame.init()
 
         self.settings = Settings()
 
-        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        # --windowed is handy for development; the default is fullscreen.
+        windowed = getattr(options, 'windowed', None)
+        if windowed:
+            self.screen = pygame.display.set_mode(windowed)
+        else:
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         self.settings.screen_width = self.screen.get_rect().width
         self.settings.screen_height = self.screen.get_rect().height
+
+        # cap the frame rate so gameplay speed does not depend on the machine.
+        self.clock = pygame.time.Clock()
 
         pygame.display.set_caption("Alien Invasion")
 
@@ -155,21 +164,25 @@ class AlienInvasion:
     def run_game(self):
         """start the main loop for the game"""
         while True:
+            self._run_one_frame()
 
-            self._check_events()
-            if self.stats.game_active and not self.game_paused:
-                self._update_stars()
-                self.ship.update()
-                self._update_bullets()
-                self._update_aliens()
-                self._auto_fire_bullets()
-                self._check_ship_respawn()
+    def _run_one_frame(self):
+        """advance the game by a single frame."""
+        self._check_events()
+        if self.stats.game_active and not self.game_paused:
+            self._update_stars()
+            self.ship.update()
+            self._update_bullets()
+            self._update_aliens()
+            self._auto_fire_bullets()
+            self._check_ship_respawn()
 
-            # Explosions are purely visual; keep animating them even when
-            # the game is paused or over so they never freeze mid-effect.
-            self._update_explosions()
+        # Explosions are purely visual; keep animating them even when
+        # the game is paused or over so they never freeze mid-effect.
+        self._update_explosions()
 
-            self._update_screen()
+        self._update_screen()
+        self.clock.tick(self.settings.fps)
 
     def _update_bullets(self):
         """update position of bullets and delete old bullets."""
@@ -528,6 +541,26 @@ class AlienInvasion:
         pygame.display.flip()
 
 
+def main(argv=None):
+    """Handle command-line options, then run the game. Returns an exit code."""
+    options = parse_args(argv)
+
+    store = ProfileStore(PROFILES_FILE)
+    store.ensure_default(HIGH_SCORE_FILE)
+
+    exit_code = run_admin_commands(options, store)
+    if exit_code is not None:
+        return exit_code
+
+    try:
+        apply_player_options(options, store)
+    except ProfileError as e:
+        print(f"error: {e}")
+        return 1
+
+    AlienInvasion(options).run_game()
+    return 0
+
+
 if __name__ == "__main__":
-    ai = AlienInvasion()
-    ai.run_game()
+    sys.exit(main())

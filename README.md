@@ -23,8 +23,15 @@ pip install pygame
 ### Running the Game
 
 ```bash
-python alien_invasion.py
+python alien_invasion.py                      # fullscreen
+python alien_invasion.py --windowed           # 1200x800 window
+python alien_invasion.py --windowed 800x600   # custom window size
+python alien_invasion.py --player Ace --difficulty hard
+python alien_invasion.py --list-players       # show saved players, then exit
+python alien_invasion.py --delete-player Ace  # remove a player, then exit
 ```
+
+`--player` creates the player if they don't exist yet.
 
 ### Controls
 
@@ -48,7 +55,8 @@ On the start screen you also manage players:
 
 ## Game Features
 
-- 🚀 Progressive difficulty: Speed increases with each level
+- 🚀 Progressive difficulty: Speed increases with each level, at a steady 60 FPS
+- 🖥️ Fullscreen or windowed (`--windowed`)
 - 💥 Explosion effects for alien/ship destruction
 - 🔊 Sound effects and background music
 - 🌟 Starry animated background

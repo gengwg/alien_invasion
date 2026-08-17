@@ -187,7 +187,7 @@ def test_star_recycles_to_top_when_off_screen(game):
 # --- Full loop: drive run_game frames with injected events ---------------
 
 def test_main_loop_runs_frames_without_errors(game):
-    """Simulate the real run_game body for many frames with gameplay."""
+    """Drive the real per-frame body of run_game with gameplay going on."""
     _start_game(game)
     game.autofire_active = True
 
@@ -197,24 +197,30 @@ def test_main_loop_runs_frames_without_errors(game):
 
     frames = 0
     start = time.time()
-    while frames < 300 and time.time() - start < 10:
-        # Mirror run_game's body (can't call run_game itself: infinite loop).
-        game._check_events()
-        if game.stats.game_active and not game.game_paused:
-            game._update_stars()
-            game.ship.update()
-            game._update_bullets()
-            game._update_aliens()
-            game._auto_fire_bullets()
-            game._check_ship_respawn()
-        game._update_explosions()
-        game._update_screen()
+    while frames < 120 and time.time() - start < 20:
+        game._run_one_frame()  # what run_game's infinite loop calls
         frames += 1
 
-    assert frames == 300
-    # Auto-fire should have produced bullets over 300 frames.
+    assert frames == 120
     assert game.stats.score >= 0  # scoring path exercised without error
     game._update_screen()  # final render without error
+
+
+def test_frame_rate_is_capped(game):
+    """The clock keeps a fast machine from running the game at warp speed."""
+    assert game.settings.fps == 60
+    _start_game(game)
+    game._run_one_frame()  # first tick sets the clock's baseline
+
+    frames = 30
+    start = time.time()
+    for _ in range(frames):
+        game._run_one_frame()
+    elapsed = time.time() - start
+
+    # 30 frames at 60 fps take ~0.5s; allow generous slack for slow machines.
+    assert elapsed > 0.5 * frames / game.settings.fps
+    assert game.clock.get_fps() <= game.settings.fps * 1.5
 
 
 def test_bullet_alien_collision_scores_and_explodes(game):

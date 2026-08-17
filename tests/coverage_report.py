@@ -13,7 +13,7 @@ sys.path.insert(0, ROOT)
 
 import pytest
 
-MODULES = ["alien_invasion.py", "profiles.py", "profile_panel.py",
+MODULES = ["alien_invasion.py", "cli.py", "profiles.py", "profile_panel.py",
            "game_stats.py", "scoreboard.py", "settings.py", "ship.py",
            "bullet.py", "alien.py", "star.py", "explosion.py", "button.py",
            "paths.py"]
