@@ -9,13 +9,12 @@ A classic space shooter game built with Pygame. Defend Earth from alien fleets a
 ### Prerequisites
 
 - Python 3.7+
-- Pygame 2.1.2+
 
 1. Clone/download the repository
 2. Install dependencies:
 
 ```bash
-pip install pygame
+pip install -r requirements.txt
 ```
 
 ## How to Play
