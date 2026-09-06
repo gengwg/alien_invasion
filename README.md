@@ -59,7 +59,7 @@ above, e.g. `uv run alien_invasion.py --windowed 800x600`.
 | Key       | Action                           |
 | --------- | -------------------------------- |
 | **← →**   | Move spaceship left/right        |
-| **SPACE** | Toggle auto-fire on/off           |
+| **SPACE** | Auto-fire (hold)                |
 | **P**     | Pause/Unpause game               |
 | **M**     | Mute/Unmute sound                |
 | **ENTER** | Start new game                   |

@@ -188,6 +188,16 @@ def test_fullscreen_is_the_default(game):
     assert game.settings.screen_width == game.screen.get_rect().width
 
 
+def test_small_window_still_creates_a_fleet():
+    """A short window must not yield an empty fleet (which would level up
+    endlessly via _check_bullet_alien_collisions)."""
+    ai = AlienInvasion(parse_args(["--windowed", "400x400"]))
+    try:
+        assert len(ai.aliens) >= 1
+    finally:
+        pygame.quit()
+
+
 # --- video driver selection ------------------------------------------------
 
 def test_prefers_wayland_driver_when_wayland_present(monkeypatch):
