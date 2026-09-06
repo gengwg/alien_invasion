@@ -265,7 +265,7 @@ class AlienInvasion:
                 for alien in aliens:
                     explosion = Explosion(alien.rect.center)
                     self.explosions.add(explosion)
-                self.stats.score += self.settings.alien_points
+                self.stats.score += self.settings.alien_points * len(aliens)
             self.sb.prep_score()
             self.sb.check_high_score()
 
@@ -322,6 +322,9 @@ class AlienInvasion:
             self.ship_respawn_time = pygame.time.get_ticks()
         else:
             self.stats.game_active = False
+            # clear the fleet and bullets so the game-over screen is clean.
+            self.aliens.empty()
+            self.bullets.empty()
             # record the finished game against the active player's profile.
             self._record_game_result()
             # show the mouse cursor once the game ends.
@@ -528,12 +531,12 @@ class AlienInvasion:
         alien = Alien(self)
         alien_width, alien_height = alien.rect.size
         available_space_x = self.settings.screen_width - (4 * alien_width)
-        number_aliens_x = int(available_space_x // (2 * alien_width))
+        number_aliens_x = max(1, int(available_space_x // (2 * alien_width)))
 
         # determine the number of aliens that fit on the screen
         ship_height = self.ship.rect.height
         available_space_y = self.settings.screen_height - (8 * alien_height) - ship_height
-        number_rows = int(available_space_y // (3 * alien_height))
+        number_rows = max(1, int(available_space_y // (3 * alien_height)))
 
         # create full fleet of aliens
         for row_number in range(number_rows):
