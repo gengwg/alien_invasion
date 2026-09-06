@@ -49,6 +49,9 @@ python alien_invasion.py --list-players       # show saved players, then exit
 python alien_invasion.py --delete-player Ace  # remove a player, then exit
 ```
 
+If you installed with **uv**, replace `python` with `uv run` in the commands
+above, e.g. `uv run alien_invasion.py --windowed 800x600`.
+
 `--player` creates the player if they don't exist yet.
 
 ### Controls
