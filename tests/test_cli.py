@@ -1,5 +1,7 @@
 """Tests for the command-line interface and its player admin commands."""
 
+import os
+
 import pygame
 import pytest
 
@@ -184,3 +186,26 @@ def test_windowed_option_sets_the_screen_size():
 
 def test_fullscreen_is_the_default(game):
     assert game.settings.screen_width == game.screen.get_rect().width
+
+
+# --- video driver selection ------------------------------------------------
+
+def test_prefers_wayland_driver_when_wayland_present(monkeypatch):
+    monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    alien_invasion._prefer_wayland_video_driver()
+    assert os.environ["SDL_VIDEODRIVER"] == "wayland"
+
+
+def test_respects_an_explicit_sdl_video_driver(monkeypatch):
+    monkeypatch.setenv("SDL_VIDEODRIVER", "x11")
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    alien_invasion._prefer_wayland_video_driver()
+    assert os.environ["SDL_VIDEODRIVER"] == "x11"
+
+
+def test_no_driver_change_without_wayland(monkeypatch):
+    monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    alien_invasion._prefer_wayland_video_driver()
+    assert "SDL_VIDEODRIVER" not in os.environ

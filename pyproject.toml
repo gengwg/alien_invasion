@@ -1,0 +1,15 @@
+[project]
+name = "alien-invasion"
+version = "1.0.0"
+description = "A classic space shooter built with Pygame."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pygame-ce>=2.5",
+]
+
+# This is a "run from source" project, not an installable library: the game
+# resolves its images/sounds relative to the source directory, so `uv` should
+# install the dependencies but not try to build/install the project itself.
+[tool.uv]
+package = false

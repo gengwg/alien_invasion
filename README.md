@@ -8,14 +8,33 @@ A classic space shooter game built with Pygame. Defend Earth from alien fleets a
 
 ### Prerequisites
 
-- Python 3.7+
+- Python 3.8+
+- Either [uv](https://docs.astral.sh/uv/) **or** plain `python3 -m venv` + `pip`
 
-1. Clone/download the repository
-2. Install dependencies:
+### Option A — uv (recommended)
+
+`uv` manages the virtual environment and installs `pygame-ce` for you, so it
+works on Linux distros that block system-wide `pip` (PEP 668 /
+"externally-managed-environment") and on Windows and macOS:
 
 ```bash
-pip install -r requirements.txt
+uv run alien_invasion.py --list-players   # first run resolves+installs deps
+uv run alien_invasion.py                  # play the game
 ```
+
+All other flags work too, e.g. `uv run alien_invasion.py --windowed`.
+
+### Option B — venv + pip
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python alien_invasion.py
+```
+
+> `requirements.txt` pins `pygame-ce`, a drop-in `pygame` replacement with
+> prebuilt wheels for modern Python on Linux, Windows and macOS.
 
 ## How to Play
 
@@ -74,14 +93,34 @@ python -m pytest tests/ -v          # headless, no display or audio needed
 python tests/coverage_report.py     # line coverage per module (stdlib only)
 ```
 
+With `uv`: `uv run --with pytest python -m pytest tests/ -v`.
+
+## Platform notes
+
+- **Windows:** the game runs unchanged. Use `pygame-ce` from `requirements.txt`
+  (it ships Windows wheels), and note that double-clicking runs fullscreen — add
+  `--windowed` (or a shortcut that passes it) if you prefer a window.
+- **Linux (Wayland):** the game prefers SDL's native Wayland backend to avoid a
+  hard crash in the X11/GLX path on some NVIDIA setups.
+
 ## Troubleshooting
 
-1. If sounds don't play:
+1. **`X Error ... BadValue ... GLX` / black window on Linux:** force a video
+   backend with the `SDL_VIDEODRIVER` variable, e.g.
+   `SDL_VIDEODRIVER=wayland uv run alien_invasion.py --windowed` or
+   `SDL_VIDEODRIVER=x11 ...`. The game already picks Wayland automatically when
+   it detects a Wayland session.
+2. **Fullscreen fails to open:** run with `--windowed` (it also falls back to a
+   scaled window automatically when a requested mode is unavailable).
+3. **`error: externally-managed-environment` (pip):** use **uv** (Option A) or a
+   `venv` (Option B) above instead of system `pip`.
+4. **If sounds don't play:**
    - Ensure `.wav/.ogg` files exist in `sounds/`
    - Check system volume/mute status
-2. If missing images:
+5. **If missing images:**
    - Verify ship and alien images exist in `images/`
-3. On Linux systems, install SDL dependencies:
+6. **On Linux, install SDL dependencies (only if your `pygame-ce` build needs
+   them):**
 
 ```bash
 sudo apt-get install python3-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev

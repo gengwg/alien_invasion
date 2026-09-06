@@ -175,6 +175,7 @@ cython_debug/
 
 high_score.txt
 .venv/
+.uv-cache/
 
 # player profiles (local data)
 profiles.json

@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pygame
@@ -16,21 +17,42 @@ from alien import Alien
 from star import Star
 from explosion import Explosion
 
+
+def _prefer_wayland_video_driver():
+    """Prefer SDL's native Wayland backend when running under a Wayland session.
+
+    The default Linux path routes through X11/GLX, which can abort the whole
+    process with a fatal ``BadValue`` error on some NVIDIA + Wayland setups
+    (the shipped XWayland context cannot be created). The Wayland driver uses
+    EGL instead and avoids that crash. An explicit ``SDL_VIDEODRIVER`` still
+    wins, so users can force another backend if they need to.
+    """
+    if os.environ.get("SDL_VIDEODRIVER"):
+        return  # caller already chose a driver
+    if os.environ.get("WAYLAND_DISPLAY"):
+        os.environ["SDL_VIDEODRIVER"] = "wayland"
+
+
 class AlienInvasion:
     """overall class to manage game assets and behavior"""
 
     def __init__(self, options=None):
         """initialize the game and create game resources"""
+        _prefer_wayland_video_driver()
+
+        # Ask for a broadly-compatible audio format up front so the mixer picks
+        # a working device (ALSA/PipeWire/PulseAudio) on as many Linux setups
+        # as possible. This is a no-op where no audio device exists; the mixer
+        # init below degrades gracefully.
+        pygame.mixer.pre_init(44100, -16, 2, 512)
+
         pygame.init()
 
         self.settings = Settings()
 
         # --windowed is handy for development; the default is fullscreen.
         windowed = getattr(options, 'windowed', None)
-        if windowed:
-            self.screen = pygame.display.set_mode(windowed)
-        else:
-            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        self.screen = self._create_screen(windowed)
         self.settings.screen_width = self.screen.get_rect().width
         self.settings.screen_height = self.screen.get_rect().height
 
@@ -96,6 +118,41 @@ class AlienInvasion:
         self.ship_respawn_delay = 1000
 
         self._prep_pause_text()
+
+    def _create_screen(self, windowed):
+        """Create the display surface, retrying with safer modes on failure.
+
+        ``windowed`` is either ``None`` (fullscreen) or a ``(width, height)``
+        tuple. Some machines cannot create the requested mode (missing hardware
+        GL, an unsupported video driver, a headless session), so fall back
+        first to a fixed-size window and then to a ``SCALED`` window, which
+        pygame can drive in software. A clear error is raised only when every
+        attempt fails so the failure is obvious instead of a raw traceback.
+        """
+        fallback = (self.settings.screen_width, self.settings.screen_height)
+        attempts = [
+            (windowed, 0) if windowed else ((0, 0), pygame.FULLSCREEN),
+            (fallback, 0),
+            (fallback, pygame.SCALED),
+        ]
+
+        last_error = None
+        seen = set()
+        for size, flags in attempts:
+            if (size, flags) in seen:
+                continue
+            seen.add((size, flags))
+            try:
+                return pygame.display.set_mode(size, flags)
+            except pygame.error as exc:
+                last_error = exc
+
+        raise RuntimeError(
+            "Unable to open a display window"
+            f"{f' ({last_error})' if last_error else ''}. "
+            "Try '--windowed', or set SDL_VIDEODRIVER to 'x11', 'wayland' "
+            "or 'windows'."
+        )
 
     def _prep_pause_text(self):
         """pre-render the pause overlay text once (it never changes)."""
